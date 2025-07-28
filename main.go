@@ -15,12 +15,13 @@ func main() {
 
 	buf := make([]byte, 8)
 	for {
-		_, err := file.Read(buf)
+		count, err := file.Read(buf)
+		// fmt.Printf("%v, %v", count, err)
 		
 		if err == io.EOF {
 			break
 		}
 
-		fmt.Printf("read: %s\n", buf)
+		fmt.Printf("read: %s\n", buf[0:count])
 	}
 }
