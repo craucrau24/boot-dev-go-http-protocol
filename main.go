@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -14,14 +15,22 @@ func main() {
 	}
 
 	buf := make([]byte, 8)
+	var lineBuild strings.Builder
+
 	for {
 		count, err := file.Read(buf)
-		// fmt.Printf("%v, %v", count, err)
 		
 		if err == io.EOF {
 			break
 		}
 
-		fmt.Printf("read: %s\n", buf[0:count])
+		lineBuild.Write(buf[:count])
+		lines := strings.Split(lineBuild.String(), "\n")
+		for i := range len(lines) - 1 {
+			fmt.Printf("read: %s\n", lines[i])
+		}
+		lineBuild.Reset()
+		lineBuild.WriteString(lines[len(lines) - 1])
 	}
+	fmt.Printf("read: %s\n", &lineBuild)
 }
