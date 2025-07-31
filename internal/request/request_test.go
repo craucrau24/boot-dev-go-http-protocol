@@ -25,7 +25,35 @@ assert.Equal(t, "GET", r.RequestLine.Method)
 assert.Equal(t, "/coffee", r.RequestLine.RequestTarget)
 assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
 
+// Good POST Request with path
+r, err = RequestFromReader(strings.NewReader("POST /money HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n{ \"amount\": 10}"))
+require.NoError(t, err)
+require.NotNil(t, r)
+assert.Equal(t, "POST", r.RequestLine.Method)
+assert.Equal(t, "/money", r.RequestLine.RequestTarget)
+assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+
+
 // Test: Invalid number of parts in request line
 _, err = RequestFromReader(strings.NewReader("/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
 require.Error(t, err)
+
+// Invalid method (out of order) Request line
+_, err = RequestFromReader(strings.NewReader("/coffee GET HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+require.Error(t, err)
+
+_, err = RequestFromReader(strings.NewReader("HTTP/1.1 GET /coffee\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+require.Error(t, err)
+
+_, err = RequestFromReader(strings.NewReader("GET HTTP/1.1 /coffee\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+require.Error(t, err)
+
+
+// Invalid version in Request line
+_, err = RequestFromReader(strings.NewReader("GET /coffee HTTP/2.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+require.Error(t, err)
+
+_, err = RequestFromReader(strings.NewReader("GET /coffee HTPT/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+require.Error(t, err)
+
 }
