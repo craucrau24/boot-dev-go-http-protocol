@@ -45,7 +45,6 @@ func splitRequestLine(line string) (string, string, string, error) {
 }
 
 func parseRequestLine(head []byte) (*RequestLine, int, error) {
-	fmt.Println(head)
 	line, _, found := strings.Cut(string(head), "\r\n")
 	if !found {
 		return nil, 0, nil

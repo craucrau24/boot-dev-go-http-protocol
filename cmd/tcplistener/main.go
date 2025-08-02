@@ -2,43 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
-	"strings"
+
+	"github.com/craucrau24/boot-dev-go-http-protocol/internal/request"
 )
-
-func getLinesChannel(f io.ReadCloser) <-chan string {
-	lineCh := make(chan string)
-
-	go func() {
-		defer f.Close()
-		defer close(lineCh)
-
-		buf := make([]byte, 8)
-		var lineBuild strings.Builder
-
-		for {
-			count, err := f.Read(buf)
-			
-			if err == io.EOF {
-				break
-			}
-
-			lineBuild.Write(buf[:count])
-			lines := strings.Split(lineBuild.String(), "\n")
-			for i := range len(lines) - 1 {
-				lineCh <- lines[i]
-			}
-			lineBuild.Reset()
-			lineBuild.WriteString(lines[len(lines) - 1])
-		}
-
-		lineCh <- lineBuild.String()
-	}()
-
-	return lineCh
-}
 
 func main() {
 	const PORT = 42069
@@ -55,12 +23,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Cannot accept connection: %v\n", err)
 		}
-		fmt.Println("Connection accepted.")
-		lines := getLinesChannel(conn)
-		for line := range lines {
-			fmt.Println(line)
-		}
-		fmt.Println("Connection closed.")
+		// fmt.Println("Connection accepted.")
+		req, err := request.RequestFromReader(conn)
+		fmt.Printf("Request line:\n- Method: %v\n- Target: %v\n- Version: %v\n", req.RequestLine.Method, req.RequestLine.RequestTarget, req.RequestLine.HttpVersion)
+		// fmt.Println("Connection closed.")
 	}
 
 	//lines := getLinesChannel(file)
