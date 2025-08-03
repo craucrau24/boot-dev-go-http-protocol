@@ -25,7 +25,14 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if bytes.IndexFunc(name, invalidRune) >= 0 {
 		return 0, false, fmt.Errorf("header name contains invalid character")
 	}
-	h[strings.ToLower(string(name))] = string(bytes.TrimLeft(value, " "))
+	key := strings.ToLower(string(name))
+	val := string(bytes.TrimLeft(value, " "))
+	old, ok := h[key]
+	if ok {
+		h[key] = old + ", " + val
+	} else {
+		h[key] = val
+	}
 	return count, false, nil
 }
 
