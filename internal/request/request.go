@@ -1,21 +1,26 @@
 package request
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/craucrau24/boot-dev-go-http-protocol/internal/headers"
 )
 
 type ParseState int
 
 const (
 	StateInitialized ParseState = iota
+	StateParsingHeaders
 	StateDone
 )
 
 type Request struct {
 	RequestLine *RequestLine
+	Headers headers.Headers
 	State ParseState
 }
 
@@ -26,13 +31,31 @@ type RequestLine struct {
 }
 
 func (r *Request) parse(data []byte) (int, error) {
-	reqLine, count, err := parseRequestLine(data)
-	if count != 0 && err == nil {
-		r.RequestLine = reqLine
-		r.State = StateDone
-	} else if err != nil {
-		r.State = StateDone
+	var count int
+	var err error
+
+	switch r.State {
+	case StateInitialized: {
+		var reqLine *RequestLine
+		reqLine, count, err = parseRequestLine(data)
+		if count != 0 && err == nil {
+			r.RequestLine = reqLine
+			r.State = StateParsingHeaders
+		} else if err != nil {
+			r.State = StateParsingHeaders
+		}
 	}
+
+	case StateParsingHeaders: {
+		var done bool
+		count, done, err = r.Headers.Parse(data)
+		fmt.Printf("%d, %v, %v\n", count, done, err)
+		if done {
+			r.State = StateDone
+		}
+	}
+	}
+	fmt.Printf("%d, %v\n", count, err)
 	return count, err
 }
 
@@ -78,32 +101,48 @@ func parseRequestLine(head []byte) (*RequestLine, int, error) {
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	req := Request {RequestLine: nil, State: StateInitialized}
+	req := Request {RequestLine: nil, State: StateInitialized, Headers: headers.NewHeaders()}
 	data := make([]byte, 0)
+	var err error
 
 
 	buf := make([]byte, 8)
-	for req.State != StateDone {
-		read, err := reader.Read(buf)
+	for req.State != StateDone && err == nil {
+		var read int
+		read, err = reader.Read(buf)
 		if err != nil {
-			return &req, fmt.Errorf("error while reading from stream: %w", err)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, fmt.Errorf("error while reading from stream: %w", err)
 		}
 		data = slices.Concat(data, buf[:read])
-		parsed, err := req.parse(data)
-		if err != nil {
-			return &req, fmt.Errorf("error while parsing request: %w", err)
-		}
-		if parsed != 0 {
-			data = data[parsed:]
+		for {
+			read, err = req.parse(data)
+			fmt.Printf("read: %v, err: %v\n", read, err)
+			if err != nil {
+				return nil, fmt.Errorf("error while parsing request: %w", err)
+			}
+			if read != 0 {
+				data = data[read:]
+			} else {
+				break
+			}
 		}
 	}
 
-	for {
-		_, err := reader.Read(buf)
-		if err == io.EOF {
-			return &req, nil
-		} else if err != nil {
-			return &req, fmt.Errorf("error while reading from stream: %w", err)
-		}
+	if req.State == StateDone {
+		return &req, nil
+	} else {
+		return nil, fmt.Errorf("EOF reached: truncated request")
 	}
+
+	// for {
+	// 	_, err := reader.Read(buf)
+	// 	if err == io.EOF {
+	// 		return &req, nil
+	// 	} else if err != nil {
+	// 		return nil, fmt.Errorf("error while reading from stream: %w", err)
+	// 	}
+	// }
 }

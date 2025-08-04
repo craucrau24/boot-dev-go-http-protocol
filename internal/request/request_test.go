@@ -116,3 +116,70 @@ _, err = RequestFromReader(reader)
 require.Error(t, err)
 
 }
+
+func TestRequestParseHeaders(t *testing.T) {
+	// Test: Standard Headers
+reader := &chunkReader{
+	data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+	numBytesPerRead: 3,
+}
+r, err := RequestFromReader(reader)
+require.NoError(t, err)
+require.NotNil(t, r)
+assert.Equal(t, "localhost:42069", r.Headers["host"])
+assert.Equal(t, "curl/7.81.0", r.Headers["user-agent"])
+assert.Equal(t, "*/*", r.Headers["accept"])
+
+// Test: Empty Headers
+reader = &chunkReader{
+	data:            "GET / HTTP/1.1\r\n\r\n",
+	numBytesPerRead: 1,
+}
+
+r, err = RequestFromReader(reader)
+require.NoError(t, err)
+require.NotNil(t, r)
+require.Zero(t, len(r.Headers))
+
+// Test: Duplicate Headers
+reader = &chunkReader{
+	data: "GET / HTTP/1.1\r\nSet-Person: lane-loves-go\r\nSet-Person: prime-loves-zig\r\nSet-Person: tj-loves-ocaml\r\n\r\n",
+	numBytesPerRead: 30,
+}
+
+r, err = RequestFromReader(reader)
+require.NoError(t, err)
+require.NotNil(t, r)
+assert.Equal(t, "lane-loves-go, prime-loves-zig, tj-loves-ocaml", r.Headers["set-person"])
+
+// Test: Case Insensitive Headers
+reader = &chunkReader{
+	data: "GET / HTTP/1.1\r\nSeT-PerSon: lane-loves-go\r\nHoST: localhost:42069\r\nSEt-PeRsOn: prime-loves-zig\r\nSET-PERSON: tj-loves-ocaml\r\n\r\n",
+	numBytesPerRead: 10,
+}
+
+r, err = RequestFromReader(reader)
+require.NoError(t, err)
+require.NotNil(t, r)
+assert.Equal(t, "lane-loves-go, prime-loves-zig, tj-loves-ocaml", r.Headers["set-person"])
+assert.Equal(t, "localhost:42069", r.Headers["host"])
+
+
+	// Test: Missing end of Headers
+reader = &chunkReader{
+	data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\n",
+	numBytesPerRead: 15,
+}
+
+r, err = RequestFromReader(reader)
+require.Error(t, err)
+require.Nil(t, r)
+
+// Test: Malformed Header
+reader = &chunkReader{
+	data:            "GET / HTTP/1.1\r\nHost localhost:42069\r\n\r\n",
+	numBytesPerRead: 3,
+}
+r, err = RequestFromReader(reader)
+require.Error(t, err)
+}
