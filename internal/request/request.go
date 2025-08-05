@@ -49,13 +49,13 @@ func (r *Request) parse(data []byte) (int, error) {
 	case StateParsingHeaders: {
 		var done bool
 		count, done, err = r.Headers.Parse(data)
-		fmt.Printf("%d, %v, %v\n", count, done, err)
+		// fmt.Printf("%d, %v, %v\n", count, done, err)
 		if done {
 			r.State = StateDone
 		}
 	}
 	}
-	fmt.Printf("%d, %v\n", count, err)
+	// fmt.Printf("%d, %v\n", count, err)
 	return count, err
 }
 
@@ -119,7 +119,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		data = slices.Concat(data, buf[:read])
 		for {
 			read, err = req.parse(data)
-			fmt.Printf("read: %v, err: %v\n", read, err)
+			// fmt.Printf("read: %v, err: %v\n", read, err)
 			if err != nil {
 				return nil, fmt.Errorf("error while parsing request: %w", err)
 			}

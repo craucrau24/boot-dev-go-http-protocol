@@ -26,7 +26,10 @@ func main() {
 		// fmt.Println("Connection accepted.")
 		req, err := request.RequestFromReader(conn)
 		fmt.Printf("Request line:\n- Method: %v\n- Target: %v\n- Version: %v\n", req.RequestLine.Method, req.RequestLine.RequestTarget, req.RequestLine.HttpVersion)
-		// fmt.Println("Connection closed.")
+		fmt.Println("Headers:")
+		for k, v := range req.Headers {
+			fmt.Printf("- %s: %s\n", k, v)
+		}
 	}
 
 	//lines := getLinesChannel(file)

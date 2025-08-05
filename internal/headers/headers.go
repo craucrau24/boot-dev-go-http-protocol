@@ -10,7 +10,7 @@ import (
 type Headers map[string]string
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-	fmt.Printf("Headers: %s\n", data)
+	// fmt.Printf("Headers: %s\n", data)
 	header, _, found := bytes.Cut(data, []byte{'\r', '\n'})
 	count := len(header) + 2
 	if !found {
@@ -34,7 +34,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	} else {
 		h[key] = val
 	}
-	fmt.Printf("count: %d\n", count)
+	// fmt.Printf("count: %d\n", count)
 	return count, false, nil
 }
 
