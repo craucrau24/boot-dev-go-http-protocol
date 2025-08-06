@@ -51,6 +51,12 @@ func invalidRune(r rune) bool {
 	return !slices.Contains(allowedChar, r)
 }
 
+func (h Headers) Get(name string) (string, bool) {
+	key := strings.ToLower(name)
+	val, ok := h[key]
+	return val, ok
+}
+
 func NewHeaders() Headers {
 	return make(map[string]string)
 }

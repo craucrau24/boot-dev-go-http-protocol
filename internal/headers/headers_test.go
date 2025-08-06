@@ -117,3 +117,24 @@ func TestParseHeaders(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
 }
+
+func TestHeadersGet(t *testing.T) {
+	headers := NewHeaders()
+	data := []byte("      Host:    localhost:42070\r\nConTent-Type: text/plain\r\n\r\n")
+	n, _, _ := headers.Parse(data)
+	headers.Parse(data[n:])
+
+	host, _ := headers.Get("HOST")
+	assert.Equal(t, "localhost:42070", host)
+	host, _ = headers.Get("host")
+	assert.Equal(t, "localhost:42070", host)
+	host, _ = headers.Get("hOsT")
+	assert.Equal(t, "localhost:42070", host)
+
+	ctype, _ := headers.Get("CONTENT-TYPE")
+	assert.Equal(t, "text/plain", ctype)
+	ctype, _ = headers.Get("content-type")
+	assert.Equal(t, "text/plain", ctype)
+	ctype, _ = headers.Get("CoNtEnT-typE")
+	assert.Equal(t, "text/plain", ctype)
+}

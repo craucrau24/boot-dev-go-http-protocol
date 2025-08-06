@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/craucrau24/boot-dev-go-http-protocol/internal/headers"
@@ -15,12 +16,14 @@ type ParseState int
 const (
 	StateInitialized ParseState = iota
 	StateParsingHeaders
+	StateParsingBody
 	StateDone
 )
 
 type Request struct {
 	RequestLine *RequestLine
 	Headers headers.Headers
+	Body []byte
 	State ParseState
 }
 
@@ -51,12 +54,38 @@ func (r *Request) parse(data []byte) (int, error) {
 		count, done, err = r.Headers.Parse(data)
 		// fmt.Printf("%d, %v, %v\n", count, done, err)
 		if done {
+			r.State = StateParsingBody
+		}
+	}
+	case StateParsingBody: {
+		var done bool
+		count, done, err = r.parseBody(data)
+		if done {
 			r.State = StateDone
 		}
+		
 	}
 	}
 	// fmt.Printf("%d, %v\n", count, err)
 	return count, err
+}
+
+func (r *Request) parseBody(data []byte) (int, bool, error) {
+	val, ok := r.Headers.Get("Content-Length")
+	clength, err := strconv.Atoi(val)
+	if err != nil && ok {
+		return 0, false, fmt.Errorf("content-length header not integer value")
+	}
+	if !ok || clength == 0 {
+		return 0, true, nil
+	}
+	limit := min(clength - len(r.Body), len(data))
+	r.Body = slices.Concat(r.Body, data[:limit])
+	if len(r.Body) == clength {
+		return limit, true, nil
+	}
+	return limit, false, nil
+
 }
 
 func splitRequestLine(line string) (string, string, string, error) {
@@ -134,6 +163,9 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	if req.State == StateDone {
 		return &req, nil
 	} else {
+		if req.State == StateParsingBody {
+			return nil, fmt.Errorf("body shorter than expected")
+		}
 		return nil, fmt.Errorf("EOF reached: truncated request")
 	}
 
