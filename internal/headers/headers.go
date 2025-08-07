@@ -26,13 +26,13 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if bytes.IndexFunc(name, invalidRune) >= 0 {
 		return 0, false, fmt.Errorf("header name contains invalid character")
 	}
-	key := strings.ToLower(string(name))
 	val := string(bytes.TrimLeft(value, " "))
-	old, ok := h[key]
+	key := string(name)
+	old, ok := h.Get(key)
 	if ok {
-		h[key] = old + ", " + val
+		h.Set(key, old + ", " + val)
 	} else {
-		h[key] = val
+		h.Set(key, val)
 	}
 	// fmt.Printf("count: %d\n", count)
 	return count, false, nil
@@ -55,6 +55,11 @@ func (h Headers) Get(name string) (string, bool) {
 	key := strings.ToLower(name)
 	val, ok := h[key]
 	return val, ok
+}
+
+func (h Headers) Set(name, value string) {
+	key := strings.ToLower(name)
+	h[key] = value
 }
 
 func NewHeaders() Headers {

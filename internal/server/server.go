@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"sync/atomic"
+
+	"github.com/craucrau24/boot-dev-go-http-protocol/internal/response"
 )
 
 type Server struct {
@@ -44,8 +46,6 @@ func (s *Server) listen() {
 
 func (s* Server) handle(conn net.Conn) {
 	defer conn.Close()
-	conn.Write([]byte("HTTP/1.1 200 OK\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"\r\n" +
-		"Hello World!"))
+	response.WriteStatusLine(conn, response.StatusOk)
+	response.WriteHeaders(conn, response.GetDefaultHeaders(0))
 }
