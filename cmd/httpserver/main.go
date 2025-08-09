@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -14,15 +13,28 @@ import (
 
 const port = 42069
 
-func handler(w io.Writer, req *request.Request) *server.HandlerError {
+func writeResponse(w *response.Writer, status response.StatusCode, message string) {
+		title, heading := server.GetDefaultMessage(status)
+		body := []byte(server.HTMLTemplate(title, heading, message))
+		headers := response.GetDefaultHeaders(len(body))
+		headers.Set("Content-Type", "text/html")
+		w.WriteStatusLine(status)
+		w.WriteHeaders(headers)
+		w.WriteBody(body)
+}
+
+func handler(w *response.Writer, req *request.Request) {
 	switch req.RequestLine.RequestTarget {
 	case "/yourproblem":
-		return &server.HandlerError{Status: response.StatusBadRequest, Message: "Your problem is not my problem\n"}
+		writeResponse(w, response.StatusBadRequest, "Your request honestly kinda sucked.")
+
 	case "/myproblem":
-		return &server.HandlerError{Status: response.StatusInternalServerError, Message: "Woopsie, my bad\n"}
+		writeResponse(w, response.StatusInternalServerError, "Okay, you know what? This one is on me.")
+
+	default:
+		writeResponse(w, response.StatusOk, "Your request was an absolute banger.")
+
 	}
-	w.Write([]byte("All good, frfr\n"))
-	return nil
 }
 
 func main() {

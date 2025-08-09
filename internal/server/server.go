@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net"
 	"sync/atomic"
 
@@ -48,41 +47,16 @@ func (s *Server) listen() {
 	}
 }
 
-func (s* Server) writeHandlerError(w io.Writer, handleErr HandlerError) error {
-	err := response.WriteStatusLine(w, handleErr.Status)
-	if err != nil {
-		return fmt.Errorf("error while sending response: %w", err)
-	}
-
-	msg := []byte(handleErr.Message)
-	err = response.WriteHeaders(w, response.GetDefaultHeaders(len(msg)))
-	if err != nil {
-		return fmt.Errorf("error while sending response: %w", err)
-	}
-
-	_, err = w.Write(msg)
-	if err != nil {
-		return fmt.Errorf("error while sending response: %w", err)
-	}
-	return nil
-}
-
 func (s* Server) handle(conn net.Conn) {
 	defer conn.Close()
 	req, err := request.RequestFromReader(conn)
 	if err != nil {
-		s.writeHandlerError(conn, HandlerError{Status: response.StatusInternalServerError, Message: fmt.Sprintf("%s", err)})
+		fmt.Println("Unexpected error")
 		return
 	}
 	var buf bytes.Buffer
-	handlerErr := s.handler(&buf, req)
+	writer := response.NewWriter(&buf)
+	s.handler(&writer, req)
 
-	if handlerErr != nil  {
-		s.writeHandlerError(conn, *handlerErr)
-	} else {
-		response.WriteStatusLine(conn, response.StatusOk)
-		response.WriteHeaders(conn, response.GetDefaultHeaders(len(buf.Bytes())))
-
-		conn.Write(buf.Bytes())
-	}
+	conn.Write(buf.Bytes())
 }
