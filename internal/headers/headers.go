@@ -62,6 +62,11 @@ func (h Headers) Set(name, value string) {
 	h[key] = value
 }
 
+func (h Headers) Unset(name string) {
+	key := strings.ToLower(name)
+	delete(h, key)
+}
+
 func NewHeaders() Headers {
 	return make(map[string]string)
 }

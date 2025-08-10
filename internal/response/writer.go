@@ -3,6 +3,8 @@ package response
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/craucrau24/boot-dev-go-http-protocol/internal/headers"
 )
@@ -45,6 +47,16 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 		return 0, fmt.Errorf("body should follow immediately headers")
 	}
 }
+
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	size := strings.ToUpper(strconv.FormatUint(uint64(len(p)), 16))
+	return w.writer.Write([]byte(fmt.Sprintf("%s\r\n%s\r\n", size, p)))
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	return w.WriteChunkedBody(nil)
+}
+
 
 func NewWriter(writer io.Writer) Writer {
 	return Writer {writer: writer, step: WriterStatusLineStep}

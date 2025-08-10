@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -54,9 +53,7 @@ func (s* Server) handle(conn net.Conn) {
 		fmt.Println("Unexpected error")
 		return
 	}
-	var buf bytes.Buffer
-	writer := response.NewWriter(&buf)
+	//var buf bytes.Buffer
+	writer := response.NewWriter(conn)
 	s.handler(&writer, req)
-
-	conn.Write(buf.Bytes())
 }
