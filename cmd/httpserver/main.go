@@ -70,6 +70,18 @@ func handler(w *response.Writer, req *request.Request) {
 		trailers.Set("X-Content-Length", strconv.Itoa(length))
 		w.WriteTrailers(trailers)
 	}
+case req.RequestLine.RequestTarget == "/video": {
+	data, err := os.ReadFile("./assets/vim.mp4")
+	if err != nil {
+		writeResponse(w, response.StatusInternalServerError, "couldn't load video file")
+	} else {
+		heads := response.GetDefaultHeaders(len(data))
+		heads.Set("content-type", "video/mp4")
+		w.WriteStatusLine(response.StatusOk)
+		w.WriteHeaders(heads)
+		w.WriteBody(data)
+	}
+}
 	default:
 		writeResponse(w, response.StatusOk, "Your request was an absolute banger.")
 
