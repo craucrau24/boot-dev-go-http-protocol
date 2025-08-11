@@ -62,6 +62,15 @@ func (h Headers) Set(name, value string) {
 	h[key] = value
 }
 
+func (h Headers) Append(name, value string) {
+	old, ok := h.Get(name)
+	if ok {
+		value = fmt.Sprintf("%s, %s", old, value)
+	}
+	h.Set(name, value)
+}
+
+
 func (h Headers) Unset(name string) {
 	key := strings.ToLower(name)
 	delete(h, key)

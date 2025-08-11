@@ -41,7 +41,7 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 
 func (w *Writer) WriteBody(p []byte) (int, error) {
 	if w.step == WriterBodyStep {
-		w.step = WriterBodyStep
+		w.step = WriterEndStep
 		return w.writer.Write(p)
 	} else {
 		return 0, fmt.Errorf("body should follow immediately headers")
@@ -49,14 +49,30 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-	size := strings.ToUpper(strconv.FormatUint(uint64(len(p)), 16))
-	return w.writer.Write([]byte(fmt.Sprintf("%s\r\n%s\r\n", size, p)))
+	if w.step == WriterBodyStep {
+		size := strings.ToUpper(strconv.FormatUint(uint64(len(p)), 16))
+		return w.writer.Write([]byte(fmt.Sprintf("%s\r\n%s\r\n", size, p)))
+	} else {
+		return 0, fmt.Errorf("body should follow immediately headers")
+	}
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
-	return w.WriteChunkedBody(nil)
+		n, err := w.WriteChunkedBody(nil)
+		w.step = WriterEndStep
+		return n, err
 }
 
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.step == WriterBodyStep {
+		w.step = WriterEndStep
+		w.writer.Write([]byte("0\r\n"))
+		return WriteHeaders(w.writer, h)
+	} else {
+		return fmt.Errorf("trailers should follow immediately body")
+	}
+}
 
 func NewWriter(writer io.Writer) Writer {
 	return Writer {writer: writer, step: WriterStatusLineStep}

@@ -1,14 +1,17 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/craucrau24/boot-dev-go-http-protocol/internal/headers"
 	"github.com/craucrau24/boot-dev-go-http-protocol/internal/request"
 	"github.com/craucrau24/boot-dev-go-http-protocol/internal/response"
 	"github.com/craucrau24/boot-dev-go-http-protocol/internal/server"
@@ -43,20 +46,29 @@ func handler(w *response.Writer, req *request.Request) {
 		defer resp.Body.Close()
 
 		buf := make([]byte, 1024)
-		headers := response.GetDefaultHeaders(0)
-		headers.Unset("Content-Length")
-		headers.Set("Transfer-Encoding", "chunked")
+		heads := response.GetDefaultHeaders(0)
+		heads.Unset("Content-Length")
+		heads.Set("Transfer-Encoding", "chunked")
+		heads.Append("Trailer", "X-Content-SHA256")
+		heads.Append("Trailer", "X-Content-Length")
 		w.WriteStatusLine(response.StatusOk)
-		w.WriteHeaders(headers)
+		w.WriteHeaders(heads)
+		hash := sha256.New()
+		length := 0
 		for {
 			n, err := resp.Body.Read(buf)
 			if err == nil {
+				hash.Write(buf[:n])
+				length += n
 				w.WriteChunkedBody(buf[:n])
 			} else {
-				w.WriteChunkedBodyDone()
 				break
 			}
 		}
+		trailers := headers.NewHeaders()
+		trailers.Set("X-Content-SHA256", fmt.Sprintf("%x", hash.Sum(nil)))
+		trailers.Set("X-Content-Length", strconv.Itoa(length))
+		w.WriteTrailers(trailers)
 	}
 	default:
 		writeResponse(w, response.StatusOk, "Your request was an absolute banger.")
